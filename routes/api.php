@@ -8,6 +8,10 @@ use App\Http\Controllers\UserAuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\CountryCityDropdownController;
+
+Route::get('/fetch-countries', [CountryCityDropdownController::class, 'fetchCountry']);
+Route::post('/fetch-cities', [CountryCityDropdownController::class, 'fetchCity']);
 
 
 Route::post('/user/register', [UserAuthController::class, 'register']);

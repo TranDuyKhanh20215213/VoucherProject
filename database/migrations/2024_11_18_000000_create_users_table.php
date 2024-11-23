@@ -17,10 +17,10 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->string('password');
             $table->string('phone')->nullable();
-            $table->string('dateOfBirth')->nullable();
+            $table->date('dateOfBirth')->nullable();
             $table->string('nationCode')->nullable();
-            $table->string('nation')->nullable();
-            $table->string('city')->nullable();
+            $table->foreignId('country_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('city_id')->nullable()->constrained()->onDelete('set null');
             $table->string('gender')->nullable();
             $table->boolean('status')->default(1);
             $table->timestamp('email_verified_at')->nullable();
