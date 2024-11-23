@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Issuance;
+use App\Models\Redemption;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use App\Models\User;
 use App\Models\City;
 use App\Models\Country;
 use Carbon\Carbon;
@@ -16,7 +20,7 @@ class UserController extends Controller
     public function changePassword(Request $request)
     {
         $userId = Auth::guard('user')->id();
-        $user = \App\Models\User::find($userId);
+        $user = User::find($userId);
 
         if (Gate::denies('user-changePassword', $user)) {
             return response()->json(['message' => 'Unauthorized'], 403);
@@ -81,4 +85,117 @@ class UserController extends Controller
 
         return response()->json(['message' => 'Profile updated successfully']);
     }
+
+    public function viewAllVoucher()
+    {
+        // Get the authenticated user ID
+        $userId = Auth::guard('user')->id();
+
+        // Check if the user is authenticated
+        if (!$userId) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User not authenticated.',
+            ], 401);
+        }
+
+        // Query to join tables and fetch the required fields
+        $redemptionData = DB::table('redemptions')
+            ->join('issuances', 'redemptions.issuance_id', '=', 'issuances.id')
+            ->join('vouchers', 'issuances.voucher_id', '=', 'vouchers.id')
+            ->join('users', 'issuances.user_id', '=', 'users.id')
+            ->where('users.id', '=', $userId) // Filter redemptions for the authenticated user
+            ->select(
+                'redemptions.used_at as used_at',
+                'vouchers.name as voucher_name',
+                'vouchers.description as voucher_description',
+                'vouchers.type_discount as type_discount',
+                'vouchers.discount_amount as discount_amount',
+                'vouchers.expired_at as expired_at',
+            )
+            ->get();
+
+        // Return the data as a JSON response
+        return response()->json([
+            'status' => 'success',
+            'data' => $redemptionData
+        ], 200);
+    }
+
+    public function viewVoucherExpired()
+    {
+        // Get the authenticated user ID
+        $userId = Auth::guard('user')->id();
+
+        // Check if the user is authenticated
+        if (!$userId) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User not authenticated.',
+            ], 401);
+        }
+
+        // Query to join tables and fetch the required fields
+        $redemptionData = DB::table('redemptions')
+            ->join('issuances', 'redemptions.issuance_id', '=', 'issuances.id')
+            ->join('vouchers', 'issuances.voucher_id', '=', 'vouchers.id')
+            ->join('users', 'issuances.user_id', '=', 'users.id')
+            ->where('users.id', '=', $userId) // Filter redemptions for the authenticated user
+            ->where('issuances.is_active', '=', false) // Add condition for inactive issuances
+            ->select(
+                'redemptions.created_at as used_at',
+                'vouchers.name as voucher_name',
+                'vouchers.description as voucher_description',
+                'vouchers.type_discount as type_discount',
+                'vouchers.discount_amount as discount_amount',
+                'vouchers.expired_at as expired_at'
+            )
+            ->get();
+
+        // Return the data as a JSON response
+        return response()->json([
+            'status' => 'success',
+            'data' => $redemptionData,
+        ], 200);
+    }
+
+    public function viewVoucherUsed()
+    {
+        // Get the authenticated user ID
+        $userId = Auth::guard('user')->id();
+
+        // Check if the user is authenticated
+        if (!$userId) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User not authenticated.',
+            ], 401);
+        }
+
+        // Query to join tables and fetch the required fields
+        $redemptionData = DB::table('redemptions')
+            ->join('issuances', 'redemptions.issuance_id', '=', 'issuances.id')
+            ->join('vouchers', 'issuances.voucher_id', '=', 'vouchers.id')
+            ->join('users', 'issuances.user_id', '=', 'users.id')
+            ->where('users.id', '=', $userId) // Filter redemptions for the authenticated user
+            ->whereNotNull('redemptions.used_at') // Add condition for used vouchers
+            ->select(
+                'redemptions.created_at as used_at',
+                'vouchers.name as voucher_name',
+                'vouchers.description as voucher_description',
+                'vouchers.type_discount as type_discount',
+                'vouchers.discount_amount as discount_amount',
+                'vouchers.expired_at as expired_at'
+            )
+            ->get();
+
+        // Return the data as a JSON response
+        return response()->json([
+            'status' => 'success',
+            'data' => $redemptionData,
+        ], 200);
+    }
+
+
+
 }
