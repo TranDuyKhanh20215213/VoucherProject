@@ -152,26 +152,26 @@ class VoucherController extends Controller
         ], 200);
     }
 
-//    public function viewRedemptionORM()
-//    {
-//        // Eloquent query with relationships and selected fields
-//        $redemptionData = Redemption::with(['issuance.voucher', 'issuance.user'])
-//            ->get()
-//            ->map(function ($redemption) {
-//                return [
-//                    'used_at' => $redemption->created_at,
-//                    'voucher_name' => $redemption->issuance->voucher->name,
-//                    'user_name' => $redemption->issuance->user->username,
-//                    'issuance_created_at' => $redemption->issuance->created_at,
-//                ];
-//            });
-//
-//        // Return the data as a JSON response
-//        return response()->json([
-//            'status' => 'success',
-//            'data' => $redemptionData
-//        ], 200);
-//    }
+    public function viewRedemptionORM()
+    {
+        // Eloquent query with relationships and selected fields
+        $redemptionData = Redemption::with(['issuance.voucher', 'issuance.user'])
+            ->get()
+            ->map(function ($redemption) {
+                return [
+                    'used_at' => $redemption->used_at,
+                    'voucher_name' => $redemption->issuance->voucher->name,
+                    'user_name' => $redemption->issuance->user->username,
+                    'issuance_created_at' => $redemption->issuance->issued_at,
+                ];
+            });
+
+        // Return the data as a JSON response
+        return response()->json([
+            'status' => 'success',
+            'data' => $redemptionData
+        ], 200);
+    }
 
 
 

@@ -23,6 +23,9 @@ Route::middleware('auth:user')->prefix('user')->group(function () {
     Route::get('/profile', [UserController::class, 'getProfile']);
     Route::post('/update-profile', [UserController::class, 'updateProfile']);
     Route::post('/change-password', [UserController::class, 'changePassword']);
+    Route::get('/view-all-voucher', [UserController::class, 'viewAllVoucher']);
+    Route::get('/view-voucher-expired', [UserController::class, 'viewVoucherExpired']);
+    Route::get('/view-voucher-used', [UserController::class, 'viewVoucherUsed']);
 });
 
 

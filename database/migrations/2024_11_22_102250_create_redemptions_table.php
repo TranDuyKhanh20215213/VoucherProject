@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('redemptions', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('issuance_id');
-            $table->timestamp('used_at');
+            $table->timestamp('used_at')->nullable();
 
             $table->foreign('issuance_id')->references('id')->on('issuances');
         });
