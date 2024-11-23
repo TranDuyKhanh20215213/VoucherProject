@@ -12,68 +12,53 @@ class PasswordResetController extends Controller
 {
     public function sendResetLink(Request $request)
     {
-        try{
-            $request->validate(['email' => 'required|email']);
+        $request->validate(['email' => 'required|email']);
 
-            $status = Password::broker('users')->sendResetLink(
-                $request->only('email')
-            );
+        $status = Password::broker('users')->sendResetLink(
+            $request->only('email')
+        );
 
-            return $status === Password::RESET_LINK_SENT
-                    ? back()->with(['status' => __($status)])
-                    : back()->withErrors(['email' => __($status)]);
+        return $status === Password::RESET_LINK_SENT
+            ? back()->with(['status' => __($status)])
+            : back()->withErrors(['email' => __($status)]);
 
-            /*
-            if ($status === Password::RESET_LINK_SENT) {
-                return response()->json(['message' => 'Password reset link sent']);
-            }
+        /*
+        if ($status === Password::RESET_LINK_SENT) {
+            return response()->json(['message' => 'Password reset link sent']);
+        }
     
-            return response()->json(['message' => 'Unable to send password reset link'], 500);
-            */
-        }
-        catch(\Exception $e){
-            Log::error('Error during sending reset link: ' . $e->getMessage());
-
-            return response()->json(['message' => 'An unexpected error occurred. Please try again later.', 500]);
-        }
+        return response()->json(['message' => 'Unable to send password reset link'], 500);
+        */
     }
 
 
     public function reset(Request $request)
     {
-        try{
-            $request->validate([
-                'email' => 'required|email',
-                'token' => 'required',
-                'password' => 'required|min:8|confirmed',
-            ]);
-    
-            $status = Password::broker('users')->reset(
-                $request->only('email', 'password', 'password_confirmation', 'token'),
-                function (User $user, string $password) {
-                    $user->forceFill([
-                        'password' => Hash::make($password)
-                    ]);
-         
-                    $user->save();
-                }
-            );
-    
-            return $status === Password::PASSWORD_RESET
-                        ? redirect()->route('login')->with('status', __($status))//redirect to login template
-                        : back()->withErrors(['email' => [__($status)]]);
-            /*
-            if ($status === Password::PASSWORD_RESET) {
-                return response()->json(['message' => 'Password has been reset']);
-            }
-    
-            return response()->json(['message' => 'Failed to reset password'], 500);
-            */
-        }
-        catch(\Exception $e){
-            Log::error('Error during reseting password: ' . $e->getMessage());
+        $request->validate([
+            'email' => 'required|email',
+            'token' => 'required',
+            'password' => 'required|min:8|confirmed',
+        ]);
 
-            return response()->json(['message' => 'An unexpected error occurred. Please try again later.', 500]);
+        $status = Password::broker('users')->reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function (User $user, string $password) {
+                $user->forceFill([
+                    'password' => Hash::make($password)
+                ]);
+
+                $user->save();
+            }
+        );
+
+        return $status === Password::PASSWORD_RESET
+            ? redirect()->route('login')->with('status', __($status)) //redirect to login template
+            : back()->withErrors(['email' => [__($status)]]);
+        /*
+        if ($status === Password::PASSWORD_RESET) {
+            return response()->json(['message' => 'Password has been reset']);
         }
-    }
+
+        return response()->json(['message' => 'Failed to reset password'], 500);
+        */
 }

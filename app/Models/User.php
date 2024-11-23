@@ -52,6 +52,16 @@ class User extends Authenticatable implements AuthCanResetPassword
         ];
     }
 
+    public function country() 
+    { 
+        return $this->belongsTo(Country::class); 
+    } 
+    
+    public function city() 
+    { 
+        return $this->belongsTo(City::class);
+    }
+
     public function issuances()
     {
         return $this->hasMany(Issuance::class);
