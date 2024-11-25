@@ -8,12 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 class Voucher extends Model
 {
     use HasFactory;
-
+    public $timestamps = false;
     protected $fillable = [
         'name',
         'description',
         'type_discount',
         'discount_amount',
+        'created',
         'expired_at'
     ];
 

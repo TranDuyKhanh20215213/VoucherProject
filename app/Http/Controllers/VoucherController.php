@@ -27,7 +27,7 @@ class VoucherController extends Controller
             'description' => $request->description,
             'type_discount' => $request->type_discount,
             'discount_amount' => $request->discount_amount,
-            'created_at' => now(),
+            'created' => now(),
             'expired_at' => $request->expired_at,
         ]);
 
@@ -55,7 +55,7 @@ class VoucherController extends Controller
             'description',
             'type_discount',
             'discount_amount',
-            'created_at',
+            'created',
             'expired_at'
         )->find($id);
 
@@ -118,7 +118,7 @@ class VoucherController extends Controller
 
         // Update the voucher details
         if (!empty($fieldsToUpdate)) {
-            $fieldsToUpdate['created_at'] = now();
+            $fieldsToUpdate['created'] = now();
             $voucher->update($fieldsToUpdate);
         }
 
@@ -177,6 +177,7 @@ class VoucherController extends Controller
 
     public function distributeVoucher(Request $request)
     {
+        // Validate input
         $request->validate([
             'voucher_id' => 'required|exists:vouchers,id',
             'user_id' => 'required|exists:users,id',
@@ -193,9 +194,21 @@ class VoucherController extends Controller
             'voucher_id' => $request->voucher_id,
             'user_id' => $request->user_id,
             'is_active' => true,
-            'created_at' => now(),
+            'issued_at' => now(),
         ]);
 
-        return response()->json(['success' => true, 'issuance' => $issuance]);
+        // Create Redemption record
+        $redemption = Redemption::create([
+            'issuance_id' => $issuance->id,
+            'used_at' => null,
+        ]);
+
+        // Return success response with issuance and redemption
+        return response()->json([
+            'success' => true,
+            'issuance' => $issuance,
+            'redemption' => $redemption,
+        ]);
     }
+
 }

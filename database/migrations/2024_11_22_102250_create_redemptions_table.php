@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('issuance_id');
             $table->timestamp('used_at')->nullable();
-
             $table->foreign('issuance_id')->references('id')->on('issuances');
         });
     }

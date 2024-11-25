@@ -8,11 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 class Issuance extends Model
 {
     use HasFactory;
-
+    public $timestamps = false;
     protected $fillable = [
         'voucher_id',
         'is_active',
         'user_id',
+        'issued_at'
     ];
 
     public function voucher()

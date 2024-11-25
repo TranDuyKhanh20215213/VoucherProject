@@ -14,7 +14,7 @@ class CreateVouchersTable extends Migration
             $table->text('description');
             $table->boolean('type_discount');
             $table->float('discount_amount', 8, 2); // Example: 10.00
-            $table->timestamp('created_at');
+            $table->timestamp('created');
             $table->timestamp('expired_at');
 
         });
