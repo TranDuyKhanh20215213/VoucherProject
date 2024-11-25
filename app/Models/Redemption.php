@@ -8,9 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 class Redemption extends Model
 {
     use HasFactory;
-
+    public $timestamps = false;
     protected $fillable = [
         'issuance_id',
+        'used_at'
     ];
 
     public function issuance()
