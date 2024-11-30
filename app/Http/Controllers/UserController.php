@@ -99,28 +99,29 @@ class UserController extends Controller
             ], 401);
         }
 
-        // Query to join tables and fetch the required fields
-        $redemptionData = DB::table('redemptions')
-            ->join('issuances', 'redemptions.issuance_id', '=', 'issuances.id')
-            ->join('vouchers', 'issuances.voucher_id', '=', 'vouchers.id')
-            ->join('users', 'issuances.user_id', '=', 'users.id')
-            ->where('users.id', '=', $userId) // Filter redemptions for the authenticated user
-            ->select(
-                'redemptions.used_at as used_at',
-                'vouchers.name as voucher_name',
-                'vouchers.description as voucher_description',
-                'vouchers.type_discount as type_discount',
-                'vouchers.discount_amount as discount_amount',
-                'vouchers.expired_at as expired_at',
-            )
-            ->get();
+        // Get the redemptions related to the authenticated user's issuances
+        $voucherData = Issuance::with('voucher') // Eager load the related voucher
+        ->where('user_id', $userId) // Filter issuances by the authenticated user
+        ->get() // Fetch all related data
+        ->map(function ($issuance) {
+            return [
+                'voucher_name' => $issuance->voucher->name,
+                'voucher_description' => $issuance->voucher->description,
+                'type_discount' => $issuance->voucher->type_discount,
+                'discount_amount' => $issuance->voucher->discount_amount,
+                'expired_at' => $issuance->voucher->expired_at,
+                'is_active' => $issuance->is_active,
+            ];
+        });
 
         // Return the data as a JSON response
         return response()->json([
             'status' => 'success',
-            'data' => $redemptionData
+            'data' => $voucherData
         ], 200);
     }
+
+
 
     public function viewVoucherExpired()
     {
@@ -135,29 +136,28 @@ class UserController extends Controller
             ], 401);
         }
 
-        // Query to join tables and fetch the required fields
-        $redemptionData = DB::table('redemptions')
-            ->join('issuances', 'redemptions.issuance_id', '=', 'issuances.id')
-            ->join('vouchers', 'issuances.voucher_id', '=', 'vouchers.id')
-            ->join('users', 'issuances.user_id', '=', 'users.id')
-            ->where('users.id', '=', $userId) // Filter redemptions for the authenticated user
-            ->where('issuances.is_active', '=', false) // Add condition for inactive issuances
-            ->select(
-                'redemptions.created_at as used_at',
-                'vouchers.name as voucher_name',
-                'vouchers.description as voucher_description',
-                'vouchers.type_discount as type_discount',
-                'vouchers.discount_amount as discount_amount',
-                'vouchers.expired_at as expired_at'
-            )
-            ->get();
+        // Fetch issuances related to the authenticated user and where the issuance is inactive
+        $voucherData = Issuance::with('voucher') // Eager load the related voucher
+        ->where('user_id', $userId) // Filter issuances by the authenticated user
+        ->where('is_active', false) // Only inactive issuances
+        ->get() // Fetch all related data
+        ->map(function ($issuance) {
+            return [
+                'voucher_name' => $issuance->voucher->name,
+                'voucher_description' => $issuance->voucher->description,
+                'type_discount' => $issuance->voucher->type_discount,
+                'discount_amount' => $issuance->voucher->discount_amount,
+                'expired_at' => $issuance->voucher->expired_at,
+            ];
+        });
 
         // Return the data as a JSON response
         return response()->json([
             'status' => 'success',
-            'data' => $redemptionData,
+            'data' => $voucherData
         ], 200);
     }
+
 
     public function viewVoucherUsed()
     {
@@ -172,29 +172,30 @@ class UserController extends Controller
             ], 401);
         }
 
-        // Query to join tables and fetch the required fields
-        $redemptionData = DB::table('redemptions')
-            ->join('issuances', 'redemptions.issuance_id', '=', 'issuances.id')
-            ->join('vouchers', 'issuances.voucher_id', '=', 'vouchers.id')
-            ->join('users', 'issuances.user_id', '=', 'users.id')
-            ->where('users.id', '=', $userId) // Filter redemptions for the authenticated user
-            ->whereNotNull('redemptions.used_at') // Add condition for used vouchers
-            ->select(
-                'redemptions.created_at as used_at',
-                'vouchers.name as voucher_name',
-                'vouchers.description as voucher_description',
-                'vouchers.type_discount as type_discount',
-                'vouchers.discount_amount as discount_amount',
-                'vouchers.expired_at as expired_at'
-            )
-            ->get();
+        // Get the redemptions where the user has used the voucher, and eager load related data
+        $voucherData = Redemption::with(['issuance.voucher', 'product']) // Eager load Issuance -> Voucher and Product
+        ->whereHas('issuance', function ($query) use ($userId) {
+            $query->where('user_id', $userId); // Filter issuances for the authenticated user
+        })
+            ->get() // Fetch all related data
+            ->map(function ($redemption) {
+                return [
+                    'used_at' => $redemption->used_at,
+                    'voucher_name' => $redemption->issuance->voucher->name,
+                    'voucher_description' => $redemption->issuance->voucher->description,
+                    'expired_at' => $redemption->issuance->voucher->expired_at,
+                    'product_name' => $redemption->product->name, // Get product name from the redemption
+                ];
+            });
 
         // Return the data as a JSON response
         return response()->json([
             'status' => 'success',
-            'data' => $redemptionData,
+            'data' => $voucherData,
         ], 200);
     }
+
+
 
 
 

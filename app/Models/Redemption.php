@@ -8,14 +8,26 @@ use Illuminate\Database\Eloquent\Model;
 class Redemption extends Model
 {
     use HasFactory;
-    public $timestamps = false;
-    protected $fillable = [
-        'issuance_id',
-        'used_at'
-    ];
 
+    /**
+     * The attributes that are mass assignable.
+     */
+    public $timestamps = false;
+    protected $fillable = ['product_id', 'issuance_id', 'payment_method', 'used_at'];
+
+    /**
+     * Relationships
+     */
+
+    // A redemption belongs to a product
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    // A redemption belongs to an issuance
     public function issuance()
     {
-        return $this->belongsTo(Issuance::class, 'issuance_id');
+        return $this->belongsTo(Issuance::class);
     }
 }

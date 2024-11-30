@@ -11,16 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('redemptions', function (Blueprint $table) {
+        Schema::create('eligibilities', function (Blueprint $table) {
             $table->id(); // Primary key
+            $table->unsignedBigInteger('voucher_id'); // Foreign key to vouchers
             $table->unsignedBigInteger('product_id'); // Foreign key to products
-            $table->unsignedBigInteger('issuance_id'); // Foreign key to issuances
-            $table->unsignedTinyInteger('payment_method'); // Payment method as an enum (0, 1, 2, etc.)
-            $table->timestamp('used_at'); // Redemption timestamp
 
             // Foreign key constraints
+            $table->foreign('voucher_id')->references('id')->on('vouchers')->onDelete('cascade');
             $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
-            $table->foreign('issuance_id')->references('id')->on('issuances')->onDelete('cascade');
         });
     }
 
@@ -29,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('redemptions');
+        Schema::dropIfExists('eligibilities');
     }
 };

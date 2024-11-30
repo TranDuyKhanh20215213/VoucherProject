@@ -22,4 +22,9 @@ class Voucher extends Model
     {
         return $this->hasMany(Issuance::class);
     }
+
+    public function eligibilities()
+    {
+        return $this->hasMany(Eligibility::class);
+    }
 }
