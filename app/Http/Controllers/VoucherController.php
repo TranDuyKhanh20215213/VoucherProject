@@ -132,28 +132,6 @@ class VoucherController extends Controller
 
     public function viewRedemption()
     {
-        // Query to join tables and fetch the required fields
-        $redemptionData = DB::table('redemptions')
-            ->join('issuances', 'redemptions.issuance_id', '=', 'issuances.id')
-            ->join('vouchers', 'issuances.voucher_id', '=', 'vouchers.id')
-            ->join('users', 'issuances.user_id', '=', 'users.id')
-            ->select(
-                'redemptions.used_at as used_at',
-                'vouchers.name as voucher_name',
-                'users.username as user_name',
-                'issuances.issued_at as issued_at',
-            )
-            ->get();
-
-        // Return the data as a JSON response
-        return response()->json([
-            'status' => 'success',
-            'data' => $redemptionData
-        ], 200);
-    }
-
-    public function viewRedemptionORM()
-    {
         // Eloquent query with relationships and selected fields
         $redemptionData = Redemption::with(['issuance.voucher', 'issuance.user'])
             ->get()
@@ -197,17 +175,10 @@ class VoucherController extends Controller
             'issued_at' => now(),
         ]);
 
-        // Create Redemption record
-        $redemption = Redemption::create([
-            'issuance_id' => $issuance->id,
-            'used_at' => null,
-        ]);
-
         // Return success response with issuance and redemption
         return response()->json([
             'success' => true,
             'issuance' => $issuance,
-            'redemption' => $redemption,
         ]);
     }
 
