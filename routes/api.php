@@ -19,7 +19,7 @@ Route::post('/user/login', [UserAuthController::class, 'login']);
 
 Route::middleware('auth:user')->prefix('user')->group(function () {
     Route::post('/logout', [UserAuthController::class, 'logout']);
-
+    Route::get('/view-detail/{id}', [UserController::class, 'viewDetailIssuance']);
     Route::get('/profile', [UserController::class, 'getProfile']);
     Route::post('/update-profile', [UserController::class, 'updateProfile']);
     Route::post('/change-password', [UserController::class, 'changePassword']);

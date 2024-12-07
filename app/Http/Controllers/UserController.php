@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Issuance;
 use App\Models\Redemption;
+use App\Models\Voucher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -86,6 +87,39 @@ class UserController extends Controller
         return response()->json(['message' => 'Profile updated successfully']);
     }
 
+
+    public function viewDetailIssuance($id)
+    {
+        // Fetch the issuance details with the related voucher using Eloquent
+        $issuance = Issuance::with('voucher')
+            ->where('id', $id)
+            ->first();
+
+        // Check if issuance exists
+        if (!$issuance) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Issuance not found'
+            ], 404);
+        }
+
+        // Prepare the response data
+        $data = [
+            'name' => $issuance->voucher->name,
+            'description' => $issuance->voucher->description,
+            'type_discount' => $issuance->voucher->type_discount,
+            'discount_amount' => $issuance->voucher->discount_amount,
+            'expired_at' => $issuance->voucher->expired_at,
+            'issued_at' => $issuance->issued_at,
+        ];
+
+        // Return the response with issuance details
+        return response()->json([
+            'status' => 'success',
+            'data' => $data
+        ], 200);
+    }
+
     public function viewAllVoucher()
     {
         // Get the authenticated user ID
@@ -157,6 +191,8 @@ class UserController extends Controller
             'data' => $voucherData
         ], 200);
     }
+
+
 
 
     public function viewVoucherUsed()
