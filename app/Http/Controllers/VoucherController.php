@@ -38,7 +38,14 @@ class VoucherController extends Controller
     public function viewList()
     {
         // Fetch vouchers and select the required fields
-        $vouchers = Voucher::select('name', 'description', 'type_discount', 'discount_amount')->get();
+        $vouchers = Voucher::select('name', 'description', 'type_discount', 'discount_amount', 'expired_at')->get();
+
+        // Modify the response data by adding a new field
+        $vouchers = $vouchers->map(function ($voucher) {
+            return array_merge($voucher->toArray(), [
+                'is_expired' => $voucher->expired_at < now(),
+            ]);
+        });
 
         // Return a JSON response
         return response()->json([
@@ -46,6 +53,7 @@ class VoucherController extends Controller
             'data' => $vouchers
         ], 200);
     }
+
 
     public function viewDetail($id)
     {
