@@ -18,6 +18,7 @@ Route::post('/user/register', [UserAuthController::class, 'register']);
 Route::post('/user/login', [UserAuthController::class, 'login']);
 
 Route::middleware('auth:user')->prefix('user')->group(function () {
+    Route::get('/products', [UserController::class, 'getProducts']);
     Route::post('/logout', [UserAuthController::class, 'logout']);
     Route::get('/view-detail/{id}', [UserController::class, 'viewDetailIssuance']);
     Route::get('/profile', [UserController::class, 'getProfile']);
@@ -26,6 +27,8 @@ Route::middleware('auth:user')->prefix('user')->group(function () {
     Route::get('/view-all-voucher', [UserController::class, 'viewAllVoucher']);
     Route::get('/view-voucher-expired', [UserController::class, 'viewVoucherExpired']);
     Route::get('/view-voucher-used', [UserController::class, 'viewVoucherUsed']);
+    Route::post('/use-voucher', [UserController::class, 'useVoucher']);
+
 });
 
 
