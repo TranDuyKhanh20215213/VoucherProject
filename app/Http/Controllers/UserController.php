@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Eligibility;
 use App\Models\Issuance;
+use App\Models\Product;
 use App\Models\Redemption;
 use App\Models\Voucher;
 use Illuminate\Http\Request;
@@ -231,6 +233,56 @@ class UserController extends Controller
         ], 200);
     }
 
+    public function getProducts()
+    {
+        // Retrieve all products with only the specified columns
+        $products = Product::select('id', 'name', 'price')->get();
+
+        // Return the products in JSON format
+        return response()->json([
+            'success' => true,
+            'data' => $products
+        ]);
+    }
+
+
+    public function useVoucher(Request $request)    {
+        // Validate the incoming request
+        $request->validate([
+            'issuance_id' => 'required|exists:issuances,id',
+            'product_id' => 'required|exists:products,id',
+            'payment_method' => 'required|numeric|in:0,1,2,3',
+        ]);
+
+        $issuanceId = $request->issuance_id;
+        $productId = $request->product_id;
+
+        // Fetch the issuance and verify eligibility
+        $issuance = Issuance::findOrFail($issuanceId);
+        $isEligible = Eligibility::where('voucher_id', $issuance->voucher_id)
+            ->where('product_id', $productId)
+            ->exists();
+
+        if (!$isEligible) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The product is not eligible for this voucher.'
+            ], 400);
+        }
+
+        // Create a redemption record
+        $redemption = Redemption::create([
+            'product_id' => $productId,
+            'issuance_id' => $issuanceId,
+            'used_at' => now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Voucher used successfully.',
+            'redemption' => $redemption,
+        ], 201);
+    }
 
 
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Eligibility;
 use App\Models\Issuance;
 use App\Models\Redemption;
 use App\Models\Voucher;
@@ -19,6 +20,8 @@ class VoucherController extends Controller
             'type_discount' => 'required|boolean',
             'discount_amount' => 'required|numeric',
             'expired_at' => 'required|date|after:today',
+            'product_ids' => 'required|array',
+            'product_ids.*' => 'exists:products,id',
         ]);
 
         // Create a new voucher
@@ -30,6 +33,16 @@ class VoucherController extends Controller
             'created' => now(),
             'expired_at' => $request->expired_at,
         ]);
+
+        // Add records in eligibilities for each product ID
+        $eligibilities = collect($request->product_ids)->map(function ($productId) use ($voucher) {
+            return [
+                'voucher_id' => $voucher->id,
+                'product_id' => $productId,
+            ];
+        });
+
+        Eligibility::insert($eligibilities->toArray());
 
         // Return a response with the created voucher
         return response()->json(['voucher' => $voucher], 201);
