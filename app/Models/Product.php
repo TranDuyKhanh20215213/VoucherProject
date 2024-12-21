@@ -12,22 +12,21 @@ class Product extends Model
     /**
      * The attributes that are mass assignable.
      */
-    public $timestamps = false;
+
     protected $fillable = ['name', 'price'];
 
     /**
      * Relationships
      */
 
-    // A product can have many redemptions
-    public function redemptions()
+    // A product can have many orders through the order_product pivot table
+    public function orders()
     {
-        return $this->hasMany(Redemption::class);
+        return $this->belongsToMany(Order::class, 'order_product')
+            ->withPivot('quantity'); // Include the quantity from the pivot table
+
     }
 
-    // A product can be eligible for many vouchers
-    public function eligibilities()
-    {
-        return $this->hasMany(Eligibility::class);
-    }
+    // A product can have many redemptions (if you need to link redemptions)
+
 }

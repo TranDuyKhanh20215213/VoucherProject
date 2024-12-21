@@ -6,20 +6,30 @@ use Illuminate\Support\Facades\Schema;
 
 class CreateVouchersTable extends Migration
 {
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
     public function up(): void
     {
         Schema::create('vouchers', function (Blueprint $table) {
-            $table->id(); // Auto-increment ID field
-            $table->string('name');
-            $table->text('description');
-            $table->boolean('type_discount');
-            $table->float('discount_amount', 8, 2); // Example: 10.00
+            $table->id(); // Primary Key
+            $table->string('name')->unique(); // Unique name
+            $table->text('description'); // Description of the voucher
+            $table->integer('type_discount'); // Type of discount (e.g., percentage or fixed amount)
+            $table->float('discount_amount', 8, 2); // Discount amount
             $table->timestamp('created');
-            $table->timestamp('expired_at');
-
+            $table->timestamp('expired_at'); // Timestamp for expiration
+            $table->json('rule'); // Rule stored as JSON
         });
     }
 
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
     public function down(): void
     {
         Schema::dropIfExists('vouchers');

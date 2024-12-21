@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Eligibility;
 use App\Models\Issuance;
+use App\Models\Product;
 use App\Models\Redemption;
 use App\Models\Voucher;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 
 class VoucherController extends Controller
@@ -32,17 +34,8 @@ class VoucherController extends Controller
             'discount_amount' => $request->discount_amount,
             'created' => now(),
             'expired_at' => $request->expired_at,
+            'rule' => json_encode($request->product_ids), // Assigning product_ids array directly to rules
         ]);
-
-        // Add records in eligibilities for each product ID
-        $eligibilities = collect($request->product_ids)->map(function ($productId) use ($voucher) {
-            return [
-                'voucher_id' => $voucher->id,
-                'product_id' => $productId,
-            ];
-        });
-
-        Eligibility::insert($eligibilities->toArray());
 
         // Return a response with the created voucher
         return response()->json(['voucher' => $voucher], 201);
@@ -77,7 +70,8 @@ class VoucherController extends Controller
             'type_discount',
             'discount_amount',
             'created',
-            'expired_at'
+            'expired_at',
+            'rule' // Include the rule field to access product IDs
         )->find($id);
 
         // Check if the voucher exists
@@ -88,12 +82,21 @@ class VoucherController extends Controller
             ], 404);
         }
 
-        // Return the voucher details
+        // Get the list of products (name, price, id) from the rule field
+        $products = Product::select('id', 'name', 'price')
+            ->whereIn('id', $voucher->rule)
+            ->get();
+
+        // Return the voucher details along with the product details
         return response()->json([
             'status' => 'success',
-            'data' => $voucher,
+            'data' => [
+                'voucher' => $voucher,
+                'eligible_products' => $products,
+            ],
         ], 200);
     }
+
 
     public function updateVoucher(Request $request, $id)
     {
@@ -115,6 +118,8 @@ class VoucherController extends Controller
             'type_discount' => 'nullable|boolean',
             'discount_amount' => 'nullable|numeric|min:0',
             'expired_at' => 'nullable|date|after:now',
+            'rule' => 'nullable|array', // Ensure 'rule' is an array of product IDs
+            'rule.*' => 'integer|exists:products,id', // Each product ID must be a valid product ID from the products table
         ]);
 
         // Prepare an array to hold the fields to update
@@ -137,9 +142,15 @@ class VoucherController extends Controller
             $fieldsToUpdate['expired_at'] = $request->input('expired_at');
         }
 
+        // If 'rule' (product_ids) is provided in the request, clear the existing values and update it
+        if ($request->has('rule')) {
+            // Erase the current product IDs (if any)
+            $fieldsToUpdate['rule'] = $request->input('rule');
+        }
+
         // Update the voucher details
         if (!empty($fieldsToUpdate)) {
-            $fieldsToUpdate['created'] = now();
+            $fieldsToUpdate['created'] = now(); // Update the created timestamp
             $voucher->update($fieldsToUpdate);
         }
 
@@ -150,6 +161,7 @@ class VoucherController extends Controller
             'data' => $voucher,
         ], 200);
     }
+
 
     public function viewRedemption()
     {
@@ -201,6 +213,42 @@ class VoucherController extends Controller
             'success' => true,
             'issuance' => $issuance,
         ]);
+    }
+    public function getProducts()
+    {
+        // Retrieve all products with only the specified columns
+        $products = Product::select('id', 'name', 'price')->get();
+
+        // Return the products in JSON format
+        return response()->json([
+            'success' => true,
+            'data' => $products
+        ]);
+    }
+
+    public function getVoucherProducts($id)
+    {
+        // Find the voucher by ID
+        $voucher = Voucher::find($id);
+
+        // If voucher not found, return an error response
+        if (!$voucher) {
+            return response()->json(['error' => 'Voucher not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        // Get product_ids directly from the 'rule' field (which is an array)
+        $productIds = $voucher->rule;
+
+        // If no product_ids are found in the rule, return an error response
+        if (empty($productIds)) {
+            return response()->json(['error' => 'No products found for this voucher'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Retrieve all products associated with the voucher's product_ids
+        $products = Product::whereIn('id', $productIds)->get();
+
+        // Return the products as JSON response
+        return response()->json(['products' => $products], Response::HTTP_OK);
     }
 
 }
