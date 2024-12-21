@@ -13,21 +13,21 @@ class Redemption extends Model
      * The attributes that are mass assignable.
      */
     public $timestamps = false;
-    protected $fillable = ['product_id', 'issuance_id', 'payment_method', 'used_at'];
+    protected $fillable = ['issuance_id', 'order_id', 'used_at'];
 
     /**
      * Relationships
      */
 
-    // A redemption belongs to a product
-    public function product()
-    {
-        return $this->belongsTo(Product::class);
-    }
-
     // A redemption belongs to an issuance
     public function issuance()
     {
         return $this->belongsTo(Issuance::class);
+    }
+
+    // A redemption belongs to an order
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
     }
 }

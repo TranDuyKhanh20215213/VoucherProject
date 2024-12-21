@@ -92,18 +92,26 @@ class UserController extends Controller
 
     public function viewDetailIssuance($id)
     {
-        // Fetch the issuance details with the related voucher using Eloquent
-        $issuance = Issuance::with('voucher')
+        $issuance = Issuance::with(['voucher', 'voucher.eligibility.product'])
             ->where('id', $id)
             ->first();
 
-        // Check if issuance exists
+
         if (!$issuance) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Issuance not found'
             ], 404);
         }
+
+
+        $products = $issuance->voucher->eligibilities->map(function ($eligibility) {
+            return [
+                'id' => $eligibility->product->id,
+                'name' => $eligibility->product->name,
+                'price' => $eligibility->product->price,
+            ];
+        });
 
         // Prepare the response data
         $data = [
@@ -113,6 +121,7 @@ class UserController extends Controller
             'discount_amount' => $issuance->voucher->discount_amount,
             'expired_at' => $issuance->voucher->expired_at,
             'issued_at' => $issuance->issued_at,
+            'products' => $products,
         ];
 
         // Return the response with issuance details
@@ -121,6 +130,7 @@ class UserController extends Controller
             'data' => $data
         ], 200);
     }
+
 
     public function viewAllVoucher()
     {
@@ -233,17 +243,7 @@ class UserController extends Controller
         ], 200);
     }
 
-    public function getProducts()
-    {
-        // Retrieve all products with only the specified columns
-        $products = Product::select('id', 'name', 'price')->get();
 
-        // Return the products in JSON format
-        return response()->json([
-            'success' => true,
-            'data' => $products
-        ]);
-    }
 
 
     public function useVoucher(Request $request)    {
