@@ -82,9 +82,20 @@ class VoucherController extends Controller
             ], 404);
         }
 
+        // Decode the rule field to get the product IDs as an array
+        $productIds = json_decode($voucher->rule, true);
+
+        // Ensure $productIds is an array before using it in whereIn
+        if (!is_array($productIds)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid product IDs in voucher rule.',
+            ], 400);
+        }
+
         // Get the list of products (name, price, id) from the rule field
         $products = Product::select('id', 'name', 'price')
-            ->whereIn('id', $voucher->rule)
+            ->whereIn('id', $productIds)
             ->get();
 
         // Return the voucher details along with the product details
@@ -96,6 +107,7 @@ class VoucherController extends Controller
             ],
         ], 200);
     }
+
 
 
     public function updateVoucher(Request $request, $id)
@@ -122,37 +134,33 @@ class VoucherController extends Controller
             'rule.*' => 'integer|exists:products,id', // Each product ID must be a valid product ID from the products table
         ]);
 
-        // Prepare an array to hold the fields to update
-        $fieldsToUpdate = [];
-
-        // Update fields only if they are present in the request and not null
+        // Update fields directly if present in the request
         if (!is_null($request->input('name'))) {
-            $fieldsToUpdate['name'] = $request->input('name');
+            $voucher->name = $request->input('name');
         }
         if (!is_null($request->input('description'))) {
-            $fieldsToUpdate['description'] = $request->input('description');
+            $voucher->description = $request->input('description');
         }
         if (!is_null($request->input('type_discount'))) {
-            $fieldsToUpdate['type_discount'] = $request->input('type_discount');
+            $voucher->type_discount = $request->input('type_discount');
         }
         if (!is_null($request->input('discount_amount'))) {
-            $fieldsToUpdate['discount_amount'] = $request->input('discount_amount');
+            $voucher->discount_amount = $request->input('discount_amount');
         }
         if (!is_null($request->input('expired_at'))) {
-            $fieldsToUpdate['expired_at'] = $request->input('expired_at');
+            $voucher->expired_at = $request->input('expired_at');
         }
 
-        // If 'rule' (product_ids) is provided in the request, clear the existing values and update it
-        if ($request->has('rule')) {
-            // Erase the current product IDs (if any)
-            $fieldsToUpdate['rule'] = $request->input('rule');
+        // Handle rule (product_ids) update directly
+        if (!is_null($request->input('rule'))) {
+            $voucher->rule = json_encode($request->input('rule'));
         }
 
-        // Update the voucher details
-        if (!empty($fieldsToUpdate)) {
-            $fieldsToUpdate['created'] = now(); // Update the created timestamp
-            $voucher->update($fieldsToUpdate);
-        }
+        // Update the created timestamp
+        $voucher->created = now();
+
+        // Save the changes
+        $voucher->save();
 
         // Return a success response
         return response()->json([
@@ -161,6 +169,8 @@ class VoucherController extends Controller
             'data' => $voucher,
         ], 200);
     }
+
+
 
 
     public function viewRedemption()
