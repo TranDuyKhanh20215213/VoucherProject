@@ -34,7 +34,10 @@ class Voucher extends Model
 
     public function usableProduct($productId)
     {
-        // Check if the 'rule' array contains the product ID
-        return in_array($productId, $this->rule ?? []);
+        // Decode the JSON rule to get an array of eligible product IDs
+        $rules = json_decode($this->rule, true);
+
+        // Check if the product ID is in the rules array
+        return in_array($productId, $rules);
     }
 }

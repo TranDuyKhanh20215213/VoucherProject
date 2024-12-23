@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Eligibility;
 use App\Models\Issuance;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\Redemption;
 use App\Models\Voucher;
@@ -92,26 +92,32 @@ class UserController extends Controller
 
     public function viewDetailIssuance($id)
     {
-        $issuance = Issuance::with(['voucher', 'voucher.eligibility.product'])
-            ->where('id', $id)
-            ->first();
+        // Retrieve the issuance along with its voucher
+        $issuance = Issuance::with('voucher')->where('id', $id)->first();
 
-
+        // Check if the issuance exists
         if (!$issuance) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Issuance not found'
+                'message' => 'Issuance not found',
             ], 404);
         }
 
+        // Decode the 'rule' field to get product IDs
+        $productIds = json_decode($issuance->voucher->rule, true); // Decode JSON to array
 
-        $products = $issuance->voucher->eligibilities->map(function ($eligibility) {
-            return [
-                'id' => $eligibility->product->id,
-                'name' => $eligibility->product->name,
-                'price' => $eligibility->product->price,
-            ];
-        });
+        // Validate the decoded 'rule' data
+        if (!is_array($productIds)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid rule format in the voucher',
+            ], 400);
+        }
+
+        // Fetch products based on the product IDs from the decoded 'rule'
+        $products = Product::whereIn('id', $productIds)
+            ->select('id', 'name', 'price')
+            ->get();
 
         // Prepare the response data
         $data = [
@@ -127,9 +133,11 @@ class UserController extends Controller
         // Return the response with issuance details
         return response()->json([
             'status' => 'success',
-            'data' => $data
+            'data' => $data,
         ], 200);
     }
+
+
 
 
     public function viewAllVoucher()
@@ -151,6 +159,7 @@ class UserController extends Controller
         ->get() // Fetch all related data
         ->map(function ($issuance) {
             return [
+                'issuance_id' => $issuance->id, // Include issuance ID
                 'voucher_name' => $issuance->voucher->name,
                 'voucher_description' => $issuance->voucher->description,
                 'type_discount' => $issuance->voucher->type_discount,
@@ -166,6 +175,7 @@ class UserController extends Controller
             'data' => $voucherData
         ], 200);
     }
+
 
 
 
@@ -189,6 +199,7 @@ class UserController extends Controller
         ->get() // Fetch all related data
         ->map(function ($issuance) {
             return [
+                'issuance_id' => $issuance->id, // Include issuance ID
                 'voucher_name' => $issuance->voucher->name,
                 'voucher_description' => $issuance->voucher->description,
                 'type_discount' => $issuance->voucher->type_discount,
@@ -207,6 +218,7 @@ class UserController extends Controller
 
 
 
+
     public function viewVoucherUsed()
     {
         // Get the authenticated user ID
@@ -221,18 +233,22 @@ class UserController extends Controller
         }
 
         // Get the redemptions where the user has used the voucher, and eager load related data
-        $voucherData = Redemption::with(['issuance.voucher', 'product']) // Eager load Issuance -> Voucher and Product
+        $voucherData = Redemption::with(['issuance.voucher', 'order.products']) // Eager load Issuance -> Voucher and Order -> Products
         ->whereHas('issuance', function ($query) use ($userId) {
             $query->where('user_id', $userId); // Filter issuances for the authenticated user
         })
             ->get() // Fetch all related data
             ->map(function ($redemption) {
+                // Prepare product names from the order's products
+                $productNames = $redemption->order->products->pluck('name')->toArray();
+
                 return [
+                    'issuance_id' => $redemption->issuance->id, // Include issuance ID
                     'used_at' => $redemption->used_at,
                     'voucher_name' => $redemption->issuance->voucher->name,
                     'voucher_description' => $redemption->issuance->voucher->description,
                     'expired_at' => $redemption->issuance->voucher->expired_at,
-                    'product_name' => $redemption->product->name, // Get product name from the redemption
+                    'products' => $productNames, // Include all product names from the order
                 ];
             });
 
@@ -246,36 +262,56 @@ class UserController extends Controller
 
 
 
-    public function useVoucher(Request $request)    {
+
+    public function useVoucher(Request $request)
+    {
         // Validate the incoming request
         $request->validate([
             'issuance_id' => 'required|exists:issuances,id',
-            'product_id' => 'required|exists:products,id',
-            'payment_method' => 'required|numeric|in:0,1,2,3',
+            'order_id' => 'required|exists:orders,id',
         ]);
 
         $issuanceId = $request->issuance_id;
-        $productId = $request->product_id;
+        $orderId = $request->order_id;
 
-        // Fetch the issuance and verify eligibility
-        $issuance = Issuance::findOrFail($issuanceId);
-        $isEligible = Eligibility::where('voucher_id', $issuance->voucher_id)
-            ->where('product_id', $productId)
-            ->exists();
+        // Fetch the issuance and its associated voucher
+        $issuance = Issuance::with('voucher')->findOrFail($issuanceId);
 
-        if (!$isEligible) {
+        // Check if the issuance is active
+        if (!$issuance->is_active) {
             return response()->json([
                 'success' => false,
-                'message' => 'The product is not eligible for this voucher.'
+                'message' => 'This voucher issuance is no longer active.',
             ], 400);
         }
 
-        // Create a redemption record
+        $voucher = $issuance->voucher;
+
+        // Fetch all products in the order using the relationship
+        $order = Order::findOrFail($orderId);
+        $orderProducts = $order->products; // This retrieves the products associated with the order via the pivot table
+
+        // Check if all products in the order are eligible for the voucher
+        foreach ($orderProducts as $orderProduct) {
+            // Check if the product is eligible for the voucher
+            if (!$voucher->usableProduct($orderProduct->id)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'One or more products in the order are not eligible for this voucher.',
+                ], 400);
+            }
+        }
+
+        // Create a redemption record for the voucher use
         $redemption = Redemption::create([
-            'product_id' => $productId,
+            'order_id' => $orderId,
             'issuance_id' => $issuanceId,
             'used_at' => now(),
         ]);
+
+        // Mark the issuance as inactive after successful voucher use
+        $issuance->is_active = false;
+        $issuance->save();
 
         return response()->json([
             'success' => true,
@@ -283,6 +319,9 @@ class UserController extends Controller
             'redemption' => $redemption,
         ], 201);
     }
+
+
+
 
 
 
