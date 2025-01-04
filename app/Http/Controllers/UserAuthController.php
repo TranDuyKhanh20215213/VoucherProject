@@ -48,6 +48,10 @@ class UserAuthController extends Controller
             return response()->json(['message' => 'Incorrect password'], 401);
         }
 
+        if ($user->status == false) {
+            return response()->json(['message' => 'Your account is locked.'], 403);
+        }
+
         $token = $user->createToken('user-auth-token')->plainTextToken;
 
         return response()->json(['token' => $token, 'user' => $user]);
