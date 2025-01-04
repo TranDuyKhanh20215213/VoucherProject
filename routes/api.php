@@ -28,7 +28,7 @@ Route::middleware('auth:user')->prefix('user')->group(function () {
     Route::get('/view-voucher-expired', [UserController::class, 'viewVoucherExpired']);
     Route::get('/view-voucher-used', [UserController::class, 'viewVoucherUsed']);
     Route::post('/use-voucher', [UserController::class, 'useVoucher']);
-    Route::post('/create-order', [VoucherController::class, 'createOrderProducts']);
+    Route::post('/create-order', [UserController::class, 'createOrderProducts']);
 });
 
 
@@ -52,6 +52,7 @@ Route::middleware('auth:admin')->prefix('admin')->group(function () {
     Route::get('/view-list-voucher', [VoucherController::class, 'viewList']);
     Route::put('/update-voucher/{id}', [VoucherController::class, 'updateVoucher']);
     Route::post('/create-voucher', [VoucherController::class, 'store']);
+    Route::delete('/delete-voucher/{id}', [VoucherController::class, 'deleteVoucher']);
     Route::post('/distribute-voucher', [VoucherController::class, 'distributeVoucher']);
     Route::get('/view-redemption', [VoucherController::class, 'viewRedemption']);
     Route::get('/products', [VoucherController::class, 'getProducts']);

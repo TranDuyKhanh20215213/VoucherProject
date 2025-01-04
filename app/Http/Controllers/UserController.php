@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Issuance;
 use App\Models\Order;
+use App\Models\OrderProduct;
 use App\Models\Product;
 use App\Models\Redemption;
 use App\Models\Voucher;
@@ -17,6 +18,7 @@ use App\Models\User;
 use App\Models\City;
 use App\Models\Country;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
@@ -317,6 +319,60 @@ class UserController extends Controller
             'success' => true,
             'message' => 'Voucher used successfully.',
             'redemption' => $redemption,
+        ], 201);
+    }
+
+    public function createOrderProducts(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'payment_method' => 'required|integer|in:1,2', // Assuming 1 and 2 are valid payment methods
+            'products' => 'required|array',
+            'products.*.name' => 'required|string', // Validate the product names
+            'products.*.quantity' => 'required|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        // Retrieve product details by name
+        $productNames = array_column($request->input('products'), 'name');
+        $productsFromDb = Product::whereIn('name', $productNames)->get();
+
+        // Validate if all product names exist
+        $missingProducts = array_diff($productNames, $productsFromDb->pluck('name')->toArray());
+        if (!empty($missingProducts)) {
+            return response()->json([
+                'errors' => ['products' => 'The following products do not exist: ' . implode(', ', $missingProducts)],
+            ], 422);
+        }
+
+        // Create the order
+        $order = Order::create([
+            'payment_method' => $request->input('payment_method'),
+            'ordered_at' => now(),
+        ]);
+
+        // Prepare order_product data
+        $products = $request->input('products');
+        $orderProducts = [];
+
+        foreach ($products as $product) {
+            $productFromDb = $productsFromDb->firstWhere('name', $product['name']);
+            $orderProducts[] = [
+                'order_id' => $order->id,
+                'product_id' => $productFromDb->id,
+                'quantity' => $product['quantity'],
+            ];
+        }
+
+        // Bulk insert into the database
+        OrderProduct::insert($orderProducts);
+
+        return response()->json([
+            'message' => 'Order and associated products created successfully!',
+            'order' => $order,
+            'order_products' => $orderProducts,
         ], 201);
     }
 

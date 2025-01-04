@@ -264,44 +264,32 @@ class VoucherController extends Controller
         return response()->json(['products' => $products], Response::HTTP_OK);
     }
 
-    public function createOrderProducts(Request $request)
+    public function deleteVoucher($id)
     {
-        $validator = Validator::make($request->all(), [
-            'payment_method' => 'required|integer|in:1,2', // Assuming 1 and 2 are valid payment methods
-            'products' => 'required|array',
-            'products.*.product_id' => 'required|exists:products,id',
-            'products.*.quantity' => 'required|integer|min:1',
-        ]);
+        // Check if the voucher exists
+        $voucher = Voucher::find($id);
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+        if (!$voucher) {
+            return response()->json([
+                'error' => 'Voucher not found.',
+            ], 404);
         }
 
-        // Create the order
-        $order = Order::create([
-            'payment_method' => $request->input('payment_method'),
-            'ordered_at' => now(),
-        ]);
+        // Check if there are any issuances for the voucher
+        $issuancesCount = Issuance::where('voucher_id', $id)->count();
 
-        // Prepare order_product data
-        $products = $request->input('products');
-        $orderProducts = [];
-
-        foreach ($products as $product) {
-            $orderProducts[] = [
-                'order_id' => $order->id,
-                'product_id' => $product['product_id'],
-                'quantity' => $product['quantity'],
-            ];
+        if ($issuancesCount > 0) {
+            return response()->json([
+                'error' => 'Cannot delete the voucher because there are issuances associated with it.',
+            ], 400);
         }
 
-        // Bulk insert into the database
-        OrderProduct::insert($orderProducts);
+        // Delete the voucher
+        $voucher->delete();
 
         return response()->json([
-            'message' => 'Order and associated products created successfully!',
-            'order' => $order,
-            'order_products' => $orderProducts,
-        ], 201);
+            'message' => 'Voucher deleted successfully.',
+        ], 200);
     }
+
 }
