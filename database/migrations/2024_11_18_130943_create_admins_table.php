@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->string('password');
             $table->string('phone')->nullable();
-            $table->string('dateOfBirth')->nullable();
+            $table->date('dateOfBirth')->nullable();
             $table->string('nationCode')->nullable();
             $table->foreignId('country_id')->nullable()->constrained()->onDelete('set null');
             $table->foreignId('city_id')->nullable()->constrained()->onDelete('set null');
