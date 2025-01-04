@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\Eligibility;
 use App\Models\Issuance;
+use App\Models\Order;
+use App\Models\OrderProduct;
 use App\Models\Product;
 use App\Models\Redemption;
 use App\Models\Voucher;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class VoucherController extends Controller
 {
@@ -261,4 +264,44 @@ class VoucherController extends Controller
         return response()->json(['products' => $products], Response::HTTP_OK);
     }
 
+    public function createOrderProducts(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'payment_method' => 'required|integer|in:1,2', // Assuming 1 and 2 are valid payment methods
+            'products' => 'required|array',
+            'products.*.product_id' => 'required|exists:products,id',
+            'products.*.quantity' => 'required|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        // Create the order
+        $order = Order::create([
+            'payment_method' => $request->input('payment_method'),
+            'ordered_at' => now(),
+        ]);
+
+        // Prepare order_product data
+        $products = $request->input('products');
+        $orderProducts = [];
+
+        foreach ($products as $product) {
+            $orderProducts[] = [
+                'order_id' => $order->id,
+                'product_id' => $product['product_id'],
+                'quantity' => $product['quantity'],
+            ];
+        }
+
+        // Bulk insert into the database
+        OrderProduct::insert($orderProducts);
+
+        return response()->json([
+            'message' => 'Order and associated products created successfully!',
+            'order' => $order,
+            'order_products' => $orderProducts,
+        ], 201);
+    }
 }

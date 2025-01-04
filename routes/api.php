@@ -28,7 +28,7 @@ Route::middleware('auth:user')->prefix('user')->group(function () {
     Route::get('/view-voucher-expired', [UserController::class, 'viewVoucherExpired']);
     Route::get('/view-voucher-used', [UserController::class, 'viewVoucherUsed']);
     Route::post('/use-voucher', [UserController::class, 'useVoucher']);
-
+    Route::post('/create-order', [VoucherController::class, 'createOrderProducts']);
 });
 
 
