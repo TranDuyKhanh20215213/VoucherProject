@@ -68,6 +68,7 @@ class VoucherController extends Controller
     {
         // Find the voucher by ID
         $voucher = Voucher::select(
+            'id',
             'name',
             'description',
             'type_discount',

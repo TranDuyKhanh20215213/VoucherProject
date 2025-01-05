@@ -267,35 +267,40 @@ class UserController extends Controller
 
     public function useVoucher(Request $request)
     {
+        // Get the authenticated user's ID
+        $userId = Auth::guard('user')->id();
+
         // Validate the incoming request
         $request->validate([
-            'issuance_id' => 'required|exists:issuances,id',
+            'name' => 'required|exists:vouchers,name',
             'order_id' => 'required|exists:orders,id',
         ]);
 
-        $issuanceId = $request->issuance_id;
+        $voucherName = $request->name;
         $orderId = $request->order_id;
 
-        // Fetch the issuance and its associated voucher
-        $issuance = Issuance::with('voucher')->findOrFail($issuanceId);
+        // Fetch the voucher by name and its associated active issuance for the logged-in user
+        $voucher = Voucher::where('name', $voucherName)
+            ->with(['issuances' => function ($query) use ($userId) {
+                $query->where('is_active', true)->where('user_id', $userId);
+            }])
+            ->firstOrFail();
 
-        // Check if the issuance is active
-        if (!$issuance->is_active) {
+        // Validate that the voucher has an active issuance belonging to the user
+        $issuance = $voucher->issuances->first();
+        if (!$issuance) {
             return response()->json([
                 'success' => false,
-                'message' => 'This voucher issuance is no longer active.',
+                'message' => 'This voucher does not belong to you or is no longer active.',
             ], 400);
         }
 
-        $voucher = $issuance->voucher;
-
         // Fetch all products in the order using the relationship
         $order = Order::findOrFail($orderId);
-        $orderProducts = $order->products; // This retrieves the products associated with the order via the pivot table
+        $orderProducts = $order->products; // Retrieves products associated with the order via the pivot table
 
         // Check if all products in the order are eligible for the voucher
         foreach ($orderProducts as $orderProduct) {
-            // Check if the product is eligible for the voucher
             if (!$voucher->usableProduct($orderProduct->id)) {
                 return response()->json([
                     'success' => false,
@@ -307,7 +312,7 @@ class UserController extends Controller
         // Create a redemption record for the voucher use
         $redemption = Redemption::create([
             'order_id' => $orderId,
-            'issuance_id' => $issuanceId,
+            'issuance_id' => $issuance->id,
             'used_at' => now(),
         ]);
 
@@ -321,6 +326,7 @@ class UserController extends Controller
             'redemption' => $redemption,
         ], 201);
     }
+
 
     public function createOrderProducts(Request $request)
     {
